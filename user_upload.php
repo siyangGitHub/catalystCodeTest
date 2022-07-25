@@ -51,23 +51,12 @@ function createTable($conn)
 id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 name VARCHAR(255) NOT NULL,
 surname VARCHAR(255) NOT NULL,
-email VARCHAR(255) UNIQUE NOT NULL)";
+email VARCHAR(255) NOT NULL,
+    UNIQUE (email))";
     if (!$conn->query($createTableSql)) {
         echo "Error creating table: " . $conn->error . "\n";
     }
 }
-
-//read filename convert to array
-$filename = 'users.csv';
-$fileData = readFileToArray($filename);
-//db server connection Detail
-$servername = "localhost";
-$username = "root";
-$password = "";
-$dbname = "catalystCodeTestDb";
-$conn = connectToDatabase($servername, $username, $password, $dbname);
-createTable($conn);
-insertData($conn, $fileData);
 
 //process data and insert into database
 function insertData($conn, $fileData)
@@ -91,15 +80,27 @@ function insertData($conn, $fileData)
         if ($name != "" && $surname != "" && $email != "") {
             $query = "INSERT INTO users (name, surname, email) VALUES ('" . $name . "','" . $surname . "','" . $email . "')";
         }
-        
+
         if ($conn->query($query)) {
             echo "New record created successfully for " . $name . " " . $surname . ".\n";
         } else {
-            echo "Error: " . $query . " " . $conn->error . '\n';
+            echo "Error: " . $query . " " . $conn->error . "\n";
         }
     }
 
 }
 
+//main() function
+//read filename convert to array
+$filename = 'users.csv';
+$fileData = readFileToArray($filename);
+//db server connection Detail
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "catalystCodeTestDb";
+$conn = connectToDatabase($servername, $username, $password, $dbname);
+createTable($conn);
+insertData($conn, $fileData);
 $conn->close();
 ?>
