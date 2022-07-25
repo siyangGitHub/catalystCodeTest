@@ -12,9 +12,7 @@ function readFileToArray($csvFile){
     return $data;
 }
 
-function connectToDatabase(){
-
-
+function connectToDatabase($servername, $username, $password, $dbname){
 // Create connection
     $conn = mysqli_connect($servername, $username, $password);
 
@@ -36,11 +34,12 @@ function connectToDatabase(){
     if ($conn->connect_error) {
         die("Connection failed: " . $conn->connect_error);
     }
+    return $conn;
 }
 
 
 //create table
-function createTable(){
+function createTable($conn){
     $createTableSql = "CREATE TABLE IF NOT EXISTS users (
 id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 name VARCHAR(255) NOT NULL,
@@ -60,8 +59,8 @@ $servername = "localhost";
 $username = "root";
 $password = "";
 $dbname = "catalystCodeTestDb";
-connectToDatabase();
-createTable();
+$conn = connectToDatabase($servername, $username, $password, $dbname);
+createTable($conn);
 
 
 
