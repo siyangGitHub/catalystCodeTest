@@ -46,6 +46,7 @@ function connectToDatabase($servername, $username, $password, $dbname)
         die("Connection failed: " . mysqli_connect_error() . "\n");
     }
 
+
 //create database
     $connectDbSql = "CREATE DATABASE IF NOT EXISTS " . $dbname;
     if (!$conn->query($connectDbSql)) {
@@ -56,20 +57,27 @@ function connectToDatabase($servername, $username, $password, $dbname)
     if ($conn->connect_error) {
         die("Connection failed: " . $conn->connect_error);
     }
+    else{
+        echo "Database connected. \n";
+    }
     return $conn;
 }
 
 //create table
 function createTable($conn)
 {
-    $createTableSql = "CREATE TABLE IF NOT EXISTS users (
+    $createTableSql = "
+CREATE TABLE IF NOT EXISTS users (
 id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
 name VARCHAR(255) NOT NULL,
 surname VARCHAR(255) NOT NULL,
 email VARCHAR(255) NOT NULL,
     UNIQUE (email))";
     if (!$conn->query($createTableSql)) {
-        echo "Error creating table: " . $conn->error . "\n";
+        die("Error creating table: " . $conn->error . "\n");
+    }
+    else{
+        echo "Table user created. \n";
     }
 }
 
@@ -107,7 +115,8 @@ function insertData($conn, $fileData)
         if ($query !== "") {
             if (validEmail($email)) {
                 if ($conn->query($query)) {
-                    echo "New record created successfully for " . $name . " " . $surname . ".\n";
+                    //used original data name here
+                    echo "New record inserted successfully for " . $name . " " . $surname . ".\n";
                 } else {
                     echo "Error: " . $query . " " . $conn->error . "\n";
                 }
