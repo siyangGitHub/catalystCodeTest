@@ -14,11 +14,17 @@ function readFileToArray($csvFile)
             if($header[0]!=="name"&&$header[1]!=="surname"&&$header[2]!=="email"){
                 die("csv file header should be name, surname and email");
             }
+            $rowCounter = 0;
             while ($row = fgetcsv($fileToRead)) {
+                if($row[0]==""&&!isset($row[1])&&$rowCounter<1){
+                    die("please supplement enough data in csv file");
+                }
                 $row = array_map('trim', $row);
                 $data[] = array_combine($header, $row);
+                $rowCounter++;
             }
         }
+
     }
     else{
         die("File format is not csv.");
@@ -130,6 +136,7 @@ function main()
     $password = "";
     $dbname = "catalystCodeTestDb";
 
+    //handling cli commands
     $shortOptions = "u";
     $shortOptions .= "p";
     $shortOptions .= "h";
@@ -157,7 +164,6 @@ function main()
                 echo "filename: ". $arguments["file"]."\n";
                 break;
             case "dry_run":
-                //read filename convert to array
                 $filename = 'users.csv';
                 $isDryRun = true;
                 if (isset($arguments["file"])&&$arguments["file"]!==false) {
