@@ -11,11 +11,13 @@ function readFileToArray($csvFile)
         while (!feof($fileToRead)) {
             $header = fgetcsv($fileToRead);
             $header = array_map('trim', $header);
+            //check header are correct format
             if($header[0]!=="name"&&$header[1]!=="surname"&&$header[2]!=="email"){
                 die("csv file header should be name, surname and email");
             }
             $rowCounter = 0;
             while ($row = fgetcsv($fileToRead)) {
+                //check if first row of data exclude header have content of user details
                 if($row[0]==""&&!isset($row[1])&&$rowCounter<1){
                     die("please supplement enough data in csv file");
                 }
@@ -71,7 +73,7 @@ email VARCHAR(255) NOT NULL,
     }
 }
 
-//process data and insert into database
+//iterate, process data and insert into database
 function insertData($conn, $fileData)
 {
     $conn->query('TRUNCATE TABLE users'); /*to be removed*/
