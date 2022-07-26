@@ -2,17 +2,26 @@
 //open file for reading and converting to an array for processing
 function readFileToArray($csvFile)
 {
-
-    $fileToRead = fopen($csvFile, 'r');
+    $fileToRead = fopen($csvFile, 'r') or die('Could not open file');
+    $ext = pathinfo($csvFile, PATHINFO_EXTENSION);
     $data[] = array();
-    //clean data and combine into an array of objects
-    while (!feof($fileToRead)) {
-        $header = fgetcsv($fileToRead);
-        $header = array_map('trim', $header);
-        while ($row = fgetcsv($fileToRead)) {
-            $row = array_map('trim', $row);
-            $data[] = array_combine($header, $row);
+
+    if($ext==="csv"){
+        //clean data and combine into an array of objects
+        while (!feof($fileToRead)) {
+            $header = fgetcsv($fileToRead);
+            $header = array_map('trim', $header);
+            if($header[0]!=="name"&&$header[1]!=="surname"&&$header[2]!=="email"){
+                die("csv file header should be name, surname and email");
+            }
+            while ($row = fgetcsv($fileToRead)) {
+                $row = array_map('trim', $row);
+                $data[] = array_combine($header, $row);
+            }
         }
+    }
+    else{
+        die("File format is not csv.");
     }
 
     fclose($fileToRead);
@@ -27,8 +36,6 @@ function connectToDatabase($servername, $username, $password, $dbname)
 // Check connection
     if (!$conn) {
         die("Connection failed: " . mysqli_connect_error() . "\n");
-    } else {
-        echo "Connected successfully\n";
     }
 
 //create database
@@ -61,46 +68,125 @@ email VARCHAR(255) NOT NULL,
 //process data and insert into database
 function insertData($conn, $fileData)
 {
+    $conn->query('TRUNCATE TABLE users'); /*to be removed*/
     foreach ($fileData as $rowData) {
         $name = "";
         $surname = "";
         $email = "";
         $query = "";
+        $insertName = "";
+        $insertSurname = "";
+        $insertEmail = "";
 
-        //handle escape ' characters of data value
         if (isset($rowData['name']) && isset($rowData['surname']) && isset($rowData['email'])) {
             $name = $rowData['name'];
             $surname = $rowData['surname'];
             $email = $rowData['email'];
-            $name = str_replace("'", "\'", $name);
-            $surname = str_replace("'", "\'", $surname);
-            $email = str_replace("'", "\'", $email);
+            //escape ' characters of data value for data insertion
+            $insertName = str_replace("'", "\' ", $name);
+            $insertSurname = str_replace("'", "\' ", $surname);
+            $insertEmail = str_replace("'", "\' ", $email);
+            //captalise names and surnames
+            $insertName = str_replace(" ", "", ucwords(strtolower($insertName)));
+            $insertSurname = str_replace(" ", "", ucwords(strtolower($insertSurname)));
+            //lowercase email addresses
+            $insertEmail = str_replace(" ", "", strtolower($insertEmail));
         }
 
         if ($name != "" && $surname != "" && $email != "") {
-            $query = "INSERT INTO users (name, surname, email) VALUES ('" . $name . "','" . $surname . "','" . $email . "')";
+            $query = "INSERT INTO users (name, surname, email) VALUES ('" . $insertName . "','" . $insertSurname . "','" . $insertEmail . "')";
         }
-
-        if ($conn->query($query)) {
-            echo "New record created successfully for " . $name . " " . $surname . ".\n";
-        } else {
-            echo "Error: " . $query . " " . $conn->error . "\n";
+        if ($query !== "") {
+            if (validEmail($email)) {
+                if ($conn->query($query)) {
+                    echo "New record created successfully for " . $name . " " . $surname . ".\n";
+                } else {
+                    echo "Error: " . $query . " " . $conn->error . "\n";
+                }
+            } else {
+                $message = "Invalid email format of " . $email . "\n";
+                fwrite(STDOUT, $message);
+            }
         }
     }
 
 }
 
-//main() function
-//read filename convert to array
-$filename = 'users.csv';
-$fileData = readFileToArray($filename);
-//db server connection Detail
-$servername = "localhost";
-$username = "root";
-$password = "";
-$dbname = "catalystCodeTestDb";
-$conn = connectToDatabase($servername, $username, $password, $dbname);
-createTable($conn);
-insertData($conn, $fileData);
-$conn->close();
+function validEmail($email)
+{
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
+function main()
+{
+
+    //db server connection Detail
+    $servername = "localhost";
+    $username = "root";
+    $password = "";
+    $dbname = "catalystCodeTestDb";
+
+    $shortOptions = "u";
+    $shortOptions .= "p";
+    $shortOptions .= "h";
+    $longOptions = ["file:", "dry_run", "help", "create_table"];
+    $arguments = getopt($shortOptions, $longOptions);
+    $keys = array_keys($arguments);
+    foreach ($keys as $key) {
+        switch ($key) {
+            case "u":
+                echo "username: ". $username."\n";
+                break;
+            case "p":
+                echo "password: ". $password."\n";
+                break;
+            case "h":
+                echo "hostname: ". $servername."\n";
+                break;
+            case "create_table":
+                $conn = connectToDatabase($servername, $username, $password, $dbname);
+                createTable($conn);
+                $conn->close();
+                break;
+            case "file":
+                echo "filename: ". $arguments["file"]."\n";
+                break;
+            case "dry_run":
+                //read filename convert to array
+                $filename = 'users.csv';
+                if (isset($arguments["file"])&&$arguments["file"]!==false) {
+                    $filename = $arguments["file"];
+                }
+                $fileData = readFileToArray($filename);
+                $conn = connectToDatabase($servername, $username, $password, $dbname);
+                createTable($conn);
+                $conn->close();
+                break;
+            case "help":
+                echo "--file [csv file name] – this is the name of the CSV to be parsed \n";
+                echo "--create_table – this will cause the MySQL users table to be built (and no further action will be taken \n)";
+                echo "--dry_run – this will be used with the --file directive in case we want to run the script but not insert into the DB. All other functions will be executed, but the database won't be altered \n";
+                echo "-u – MySQL username \n";
+                echo "-p – MySQL password \n";
+                echo "-h – MySQL host \n";
+        }
+    }
+    //read filename convert to array
+    $filename = 'users.csv';
+    if (isset($arguments["file"])&&$arguments["file"]!==false) {
+        $filename = $arguments["file"];
+    }
+    $fileData = readFileToArray($filename);
+    $conn = connectToDatabase($servername, $username, $password, $dbname);
+    createTable($conn);
+    insertData($conn, $fileData);
+    $conn->close();
+}
+
+main();
+
 ?>
