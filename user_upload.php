@@ -136,6 +136,7 @@ function main()
     $longOptions = ["file:", "dry_run", "help", "create_table"];
     $arguments = getopt($shortOptions, $longOptions);
     $keys = array_keys($arguments);
+    $isDryRun = false;
     foreach ($keys as $key) {
         switch ($key) {
             case "u":
@@ -158,6 +159,7 @@ function main()
             case "dry_run":
                 //read filename convert to array
                 $filename = 'users.csv';
+                $isDryRun = true;
                 if (isset($arguments["file"])&&$arguments["file"]!==false) {
                     $filename = $arguments["file"];
                 }
@@ -173,18 +175,21 @@ function main()
                 echo "-u – MySQL username \n";
                 echo "-p – MySQL password \n";
                 echo "-h – MySQL host \n";
+                echo "\n";
         }
     }
-    //read filename convert to array
-    $filename = 'users.csv';
-    if (isset($arguments["file"])&&$arguments["file"]!==false) {
-        $filename = $arguments["file"];
+
+    if(!$isDryRun){
+        $filename = 'users.csv';
+        if (isset($arguments["file"])&&$arguments["file"]!==false) {
+            $filename = $arguments["file"];
+        }
+        $fileData = readFileToArray($filename);
+        $conn = connectToDatabase($servername, $username, $password, $dbname);
+        createTable($conn);
+        insertData($conn, $fileData);
+        $conn->close();
     }
-    $fileData = readFileToArray($filename);
-    $conn = connectToDatabase($servername, $username, $password, $dbname);
-    createTable($conn);
-    insertData($conn, $fileData);
-    $conn->close();
 }
 
 main();
